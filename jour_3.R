@@ -4,13 +4,13 @@
 library(tidyverse)
 library(readxl)
 
-setwd("~/Travaux_R/")
-input <- read.csv("Advent_of_code_2024_data/test_j3.txt", header = FALSE, sep = " ")
-input <- read.csv("Advent_of_code_2024_data/input_j3.txt", header = FALSE, sep = "")
+#setwd("~/Travaux_R/")
+setwd("~/git_travail/adv_of_code_2024")
+
+#input <- read.csv("Advent_of_code_2024_data/test_j3.txt", header = FALSE, sep = " ")
+input <- read.csv("Advent_of_code_2024_data/input_j3.txt", header = FALSE, sep = "\n")
 
 #Etoile 1 ####
-
-
 #extraire le motif
 data_temp <- input %>% 
   str_extract_all("mul\\(\\d+,\\d+\\)") %>% 
@@ -31,54 +31,32 @@ print(data_final)
 
 
 #Etoile 2 ####
-
 #extraire le motif
-data_temp <- input %>% 
+data_motif <- input %>% 
   str_extract_all("mul\\(\\d+,\\d+\\)|do\\(\\)|don't\\(\\)") %>% 
-  unlist()
-  
-data_temp
+  unlist() %>% 
+  data.frame() 
 
-#initialisation
-data_a_garder <- data.frame()
-i <-1
-
-while (i <= length(data_temp)) {
-  
-  #récuperer les premieres données avant le don't
-    while (data_temp[i] != "don't()") {
-      data_a_garder <- bind_rows(data_a_garder, data.frame(value = data_temp[i]))
-      i <- i+1
-    }
-  #PAsser au suivant
-  i <- i+1
-  
-  # Ne pas ajouter les éléments entre "don't()" et "do()"
-  while (i <= length(data_temp) && data_temp[i] != "do()") {
-      i <- i + 1
-  }
-  
-  # Passer "do()" si on l'a trouvé
-  if (i <= length(data_temp) && data_temp[i] == "do()") {
-    i <- i + 1
-  }
-  # Ajouter les éléments après "do()"
-  while (i <= length(data_temp) && data_temp[i] != "don't()") {
-    data_a_garder <- bind_rows(data_a_garder, data.frame(value = data_temp[i]))
-    i <- i + 1
-  }
-  
-  # Passer "don't()" si on l'a trouvé pour la prochaine itération
-  if (i <= length(data_temp) && data_temp[i] == "don't()") {
-    i <- i + 1
-  }
-}
-  data_a_garder
+colnames(data_motif)[1] <- "value"
 
 
+# Identifier les indices de "do()" et "don't()"
+data_temp <- data_motif %>%
+  mutate(
+    group = case_when(
+      value == "do()" ~ "start",
+      value == "don't()" ~ "end",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  #Propager les valeurs de "start" et "end" pour identifier les groupes
+  fill(group, .direction = "downup") %>%
+  mutate(group = ifelse(is.na(group), "other", group)) %>% 
+  #filtrer sur les starts
+  filter(group == "start" & value != "do()" )
 
 #extraire les nombres
-nombres <- str_extract_all(data_a_garder,"\\d+") %>% 
+nombres <- str_extract_all(data_temp,"\\d+") %>% 
   unlist()
 
 # Restructurer les chiffres en paires
